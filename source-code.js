@@ -1,0 +1,330 @@
+/**
+ * Zepto Product Sorter (v1.0)
+ * A performance-focused bookmarklet to sort Zepto products by discount.
+ * * Repo: https://github.com/jairaj26/zepto-product-sorter
+ */
+
+(function () {
+  console.log("Starting Zepto Product Sorter v1.0...");
+
+  // --- Configuration ---
+  const CATEGORIES = [
+    "Atta", "Rice", "Oil", "Ghee", "Dal", "Masala", "Packaged Foods",
+    "Tea", "Coffee", "Biscuits", "Dairy", "Sweets", "Snacks", "Skincare", "Cleaning"
+  ];
+  const MIN_DISCOUNT = 40; // Only keep items with >= 40% off
+  const SCROLL_THROTTLE = 1500; // Wait 1.5s between scrolls to avoid IP bans
+
+  // --- Inject CSS Styles ---
+  const style = document.createElement("style");
+  style.innerHTML = `
+    @keyframes z-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .z-dock { position: fixed; z-index: 99999; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.15); padding: 10px; padding-top: 35px; font-family: sans-serif; transition: all 0.3s; border-radius: 12px; border: 1px solid #eee; box-sizing: border-box; }
+    .z-dock.desktop { top: 100px; right: 20px; width: 140px; max-height: 80vh; overflow-y: auto; }
+    .z-dock.mobile { bottom: 0; left: 0; width: 100%; height: 80px; display: flex; align-items: center; overflow-x: auto; white-space: nowrap; border-radius: 12px 12px 0 0; padding-top: 10px; }
+    
+    /* Collapsed State Logic */
+    .z-dock.minimized .z-btn:not(.manual) { display: none !important; }
+    .z-dock.minimized { height: auto !important; overflow: hidden; }
+
+    .z-btn { display: block; width: 100%; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: #495057; transition: all 0.2s; text-align: left; box-sizing: border-box; }
+    .z-dock.mobile .z-btn { display: inline-block; width: auto; margin: 0 4px; }
+    .z-btn:hover { background: #ff3269; color: white; border-color: #ff3269; padding-left: 15px; }
+    .z-btn.active { background: #720e9e; color: white; border-color: #720e9e; }
+    .z-btn.manual { background: #f3e5f5; border-color: #ce93d8; color: #7b1fa2; text-align: center; font-weight: 700; }
+    
+    /* Control Buttons */
+    .z-ctrl { position: absolute; top: 8px; width: 24px; height: 24px; background: #eee; color: #333; border-radius: 50%; text-align: center; line-height: 24px; font-size: 14px; cursor: pointer; transition: background 0.2s; z-index: 100000; }
+    .z-ctrl:hover { background: #ff3269; color: white; }
+    .z-close { right: 8px; }
+    .z-toggle { right: 36px; }
+
+    /* Loading Overlay */
+    .z-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(20,0,30,0.85); backdrop-filter: blur(5px); z-index: 99998; display: none; flex-direction: column; justify-content: center; align-items: center; }
+    .z-spinner { width: 70px; height: 70px; border: 6px solid rgba(255,255,255,0.1); border-top: 6px solid #ff3269; border-radius: 50%; animation: z-spin 1s linear infinite; margin-bottom: 25px; }
+    .z-text { color: white; font-size: 18px; font-weight: 500; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+  `;
+  document.head.appendChild(style);
+
+  // --- UI Construction ---
+  const dock = document.createElement("div");
+  dock.className = window.innerWidth > 768 ? "z-dock desktop" : "z-dock mobile";
+
+  // Close Button
+  const closeBtn = document.createElement("div");
+  closeBtn.className = "z-ctrl z-close";
+  closeBtn.innerText = "✕";
+  closeBtn.onclick = () => dock.remove();
+  dock.appendChild(closeBtn);
+
+  // Min/Max Toggle Button
+  const toggleBtn = document.createElement("div");
+  toggleBtn.className = "z-ctrl z-toggle";
+  toggleBtn.innerText = "−";
+  toggleBtn.onclick = () => {
+    dock.classList.toggle("minimized");
+    toggleBtn.innerText = dock.classList.contains("minimized") ? "+" : "−";
+  };
+  dock.appendChild(toggleBtn);
+
+  // Loader Overlay
+  const loader = document.createElement("div");
+  loader.className = "z-loader";
+  const spinner = document.createElement("div");
+  spinner.className = "z-spinner";
+  const msg = document.createElement("div");
+  msg.className = "z-text";
+  msg.innerText = "Initializing...";
+  loader.appendChild(spinner);
+  loader.appendChild(msg);
+  document.body.appendChild(dock);
+  document.body.appendChild(loader);
+
+  // --- Helper Functions ---
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Shows a temporary message at the bottom of the screen
+  const showToast = (text) => {
+    const t = document.createElement("div");
+    t.innerText = text;
+    t.style.cssText = "position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(50,50,50,0.9);color:#fff;padding:12px 24px;border-radius:30px;z-index:100002;font-size:14px;box-shadow:0 4px 15px rgba(0,0,0,0.3);opacity:0;transition:opacity 0.3s ease-in-out;pointer-events:none;";
+    document.body.appendChild(t);
+    setTimeout(() => (t.style.opacity = "1"), 10);
+    setTimeout(() => {
+      t.style.opacity = "0";
+      setTimeout(() => t.remove(), 300);
+    }, 3000);
+  };
+
+  // Turbo Mode: Hides images during scroll to save CPU/RAM
+  const toggleTurbo = (on) => {
+    let t = document.getElementById("z-turbo");
+    if (on) {
+      if (!t) {
+        t = document.createElement("style");
+        t.id = "z-turbo";
+        t.innerHTML = "img{visibility:hidden!important;} *{transition:none!important;animation:none!important;}";
+        document.head.appendChild(t);
+      }
+    } else {
+      if (t) t.remove();
+    }
+  };
+
+  // Simulates React Input typing
+  const typeReact = async (val) => {
+    const input = document.querySelector('input[type="text"]');
+    if (!input) return;
+    input.focus();
+    const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    s.call(input, "");
+    input.dispatchEvent(new Event("input", { bubbles: !0 }));
+    await wait(200);
+    s.call(input, val);
+    input.dispatchEvent(new Event("input", { bubbles: !0 }));
+    await wait(500);
+    const k = { bubbles: !0, cancelable: !0, key: "Enter", code: "Enter", keyCode: 13, which: 13 };
+    input.dispatchEvent(new KeyboardEvent("keydown", k));
+    input.dispatchEvent(new KeyboardEvent("keyup", k));
+  };
+
+  const pressEnterOnly = async () => {
+    const input = document.querySelector('input[type="text"]');
+    if (!input) return;
+    input.focus();
+    await wait(200);
+    const k = { bubbles: !0, cancelable: !0, key: "Enter", code: "Enter", keyCode: 13, which: 13 };
+    input.dispatchEvent(new KeyboardEvent("keydown", k));
+    input.dispatchEvent(new KeyboardEvent("keyup", k));
+  };
+
+  // Infinite Scroll Logic
+  const scrollTillEnd = async () => {
+    let lastCount = 0;
+    let unchanged = 0;
+    while (unchanged < 2) {
+      const items = Array.from(document.querySelectorAll("a")).filter((el) => el.innerText.includes("₹"));
+      if (items.length > 0) {
+        items[items.length - 1].scrollIntoView({ block: "start", behavior: "auto" });
+        await wait(SCROLL_THROTTLE); // Throttle to mimic human behavior
+        window.scrollBy({ top: -150, behavior: "auto" });
+      } else {
+        window.scrollBy(0, 500);
+      }
+      await wait(2000);
+      const newCount = document.querySelectorAll("a").length;
+      if (newCount === lastCount) {
+        unchanged++;
+      } else {
+        lastCount = newCount;
+        unchanged = 0;
+      }
+    }
+  };
+
+  // Core Processing Logic
+  const processPage = async () => {
+    msg.innerText = "Sorting by discount...";
+    await wait(500);
+    
+    // Find all potential product links
+    const allLinks = Array.from(document.querySelectorAll("a")).filter((el) => el.innerText.includes("₹"));
+    if (0 === allLinks.length) throw new Error("No products found.");
+
+    // Deep Scan: Vote for the container that holds the most products
+    const votes = new Map();
+    allLinks.forEach((l) => {
+      let curr = l.parentElement;
+      for (let i = 0; i < 4; i++) { // Look 4 levels up (DOM Traversal)
+        if (curr) {
+          votes.set(curr, (votes.get(curr) || 0) + 1);
+          curr = curr.parentElement;
+        }
+      }
+    });
+    
+    const sortedVotes = Array.from(votes.entries()).sort((a, b) => b[1] - a[1]);
+    const masterGrid = sortedVotes[0][0]; // The winner is the Master Grid
+    const tagClass = "my-discount-tag-zs";
+    let processed = [];
+    const rawItems = masterGrid ? Array.from(masterGrid.querySelectorAll("a")) : allLinks;
+
+    // Discount Calculation Logic
+    const getDiscount = (el) => {
+      // Use textContent for instant performance (avoids reflow)
+      const parent = el.closest("div");
+      const parentText = parent ? parent.textContent.toUpperCase() : el.textContent.toUpperCase();
+      
+      // Filter out invalid items
+      if (parentText.includes("NOTIFY") || parentText.includes("OUT OF STOCK")) return -1;
+
+      // Extract prices
+      let cleanText = el.textContent.replace(/Save\s*₹\s*[\d,.]+/gi, "").replace(/[\d,.]+\s*Off/gi, "");
+      const m = cleanText.match(/₹\s*[\d,.]+/g);
+      
+      if (m && m.length >= 2) {
+        const v = [...new Set(m.map((x) => parseFloat(x.replace(/[^0-9.]/g, ""))))].sort((a, b) => b - a);
+        if (v.length >= 2) {
+          const mrp = v[0];
+          const offer = v[1];
+          if (mrp > 0) return ((mrp - offer) / mrp) * 100;
+        }
+      }
+      return 0;
+    };
+
+    // Apply Tags and Sort
+    rawItems.forEach((el) => {
+      const txt = el.textContent.toUpperCase();
+      if (txt.includes("₹") && !txt.includes("BANNER")) {
+        const parent = el.closest("div");
+        if (parent && parent.getAttribute("data-type") === "BANNER_CAROUSEL_WITHOUT_TITLE") return;
+        
+        const pct = getDiscount(el);
+        if (pct === -1) return;
+
+        const oldTag = el.querySelector("." + tagClass);
+        if (oldTag) oldTag.remove();
+
+        if (pct > 0) {
+          // Floating Badge UI
+          const tag = document.createElement("div");
+          tag.innerHTML = `${Math.round(pct)}%<div style="font-size:9px;opacity:0.9">OFF</div>`;
+          tag.className = tagClass;
+          tag.style.cssText = "position:absolute;top:10px;left:10px;background:#720e9e;color:white;font-weight:700;font-size:13px;padding:4px 6px;text-align:center;line-height:1;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.2);z-index:10;display:flex;flex-direction:column;justify-content:center;";
+          el.style.position = "relative";
+          el.appendChild(tag);
+        }
+        processed.push({ element: el, discount: pct });
+      }
+    });
+
+    let finalItems = processed.filter((p) => p.discount >= MIN_DISCOUNT);
+    if (finalItems.length === 0) {
+      showToast(`No items >= ${MIN_DISCOUNT}% OFF. Showing all.`);
+      finalItems = processed;
+    }
+    
+    finalItems.sort((a, b) => b.discount - a.discount);
+    
+    // Wipe and Rebuild Grid
+    masterGrid.innerHTML = "";
+    finalItems.forEach((p) => masterGrid.appendChild(p.element));
+    
+    toggleTurbo(false); // Disable Turbo Mode (Reveal Images)
+    
+    if (masterGrid) {
+      const y = masterGrid.getBoundingClientRect().top + window.scrollY - 130;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  };
+
+  // Task Runners
+  const runAutoTask = async (cat, btn) => {
+    loader.style.display = "flex";
+    btn.classList.add("active");
+    btn.innerText = "...";
+    try {
+      let input = document.querySelector('input[type="text"]');
+      if (!input || input.offsetParent === null) {
+        const icon = document.querySelector('a[href="/search"]') || document.querySelector('a[href*="search"]');
+        if (icon) {
+          icon.click();
+          await wait(1500);
+          input = document.querySelector('input[type="text"]');
+        }
+      }
+      if (!input) throw new Error("Search not found");
+      const stale = Array.from(document.querySelectorAll("a")).filter((e) => e.innerText.includes("₹"));
+      stale.forEach((e) => e.remove());
+      msg.innerText = `Searching: ${cat}`;
+      await typeReact(cat);
+      await wait(3500);
+      msg.innerText = "Cleaning residue...";
+      await pressEnterOnly();
+      await wait(2500);
+      window.scrollTo(0, 0);
+      toggleTurbo(true);
+      msg.innerText = "Loading (Safe Mode)...";
+      await scrollTillEnd();
+      await processPage();
+    } catch (e) {
+      toggleTurbo(false);
+      alert("Error: " + e.message);
+    }
+    loader.style.display = "none";
+    btn.classList.remove("active");
+    btn.innerText = cat;
+  };
+
+  const runManualTask = async (btn) => {
+    loader.style.display = "flex";
+    btn.innerText = "...";
+    msg.innerText = "Processing (Safe Mode)...";
+    try {
+      toggleTurbo(true);
+      await scrollTillEnd();
+      await processPage();
+    } catch (e) {
+      toggleTurbo(false);
+      alert("Error: " + e.message);
+    }
+    loader.style.display = "none";
+    btn.innerText = "⚡ Sort Page";
+  };
+
+  // Add Buttons to Dock
+  const mb = document.createElement("button");
+  mb.className = "z-btn manual";
+  mb.innerText = "⚡ Sort Page";
+  mb.onclick = () => runManualTask(mb);
+  dock.appendChild(mb);
+
+  CATEGORIES.forEach((cat) => {
+    const btn = document.createElement("button");
+    btn.className = "z-btn";
+    btn.innerText = cat;
+    btn.onclick = () => runAutoTask(cat, btn);
+    dock.appendChild(btn);
+  });
+})();
