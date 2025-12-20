@@ -55,38 +55,38 @@ We use a "Loader" method. This means you only install a tiny script once. Whenev
 
 I spent about a month reverse-engineering Zepto's frontend to build this. What started as a simple "sort" script turned into a complex engineering challenge due to Zepto's dynamic architecture. Here were the main hurdles:
 
-1.  ** The "Dirty Data" Challenge 🧹**
-* Zepto's product cards are unstructured. A simple number scraper would fail miserably because:
-* Brand Confusion: Brands like "24 Mantra", "921 Rice", or "4700BC" were often mistaken for prices (e.g., the script thought "4700" was the MRP, showing a 99% discount).
-* Unit Noise: Weights like "500g" or "100ml" often appeared before the price.
+### 1. The "Dirty Data" Challenge 🧹
+Zepto's product cards are unstructured. A simple number scraper would fail miserably because:
+* **Brand Confusion:** Brands like **"24 Mantra"**, **"921 Rice"**, or **"4700BC"** were often mistaken for prices (e.g., the script thought "4700" was the MRP, showing a 99% discount).
+* **Unit Noise:** Weights like "500g" or "100ml" often appeared before the price.
 
-The Solution: 
-I implemented "Guillotine Logic." The script actively hunts for the "OFF" tag and physically chops the text string at that exact point. It strictly ignores any number that appears after the discount tag, instantly solving the brand name bug.
+**The Solution:**
+I implemented **"Guillotine Logic."** The script actively hunts for the "OFF" tag and *physically chops* the text string at that exact point. It strictly ignores any number that appears after the discount tag, instantly solving the brand name bug.
 
-2. **Performance vs. Accuracy (The textContent War) ⚡**
-* Initially, I used innerText to read prices because it ignores hidden HTML elements. However, this caused * Layout Thrashing, making the browser freeze on older phones because it forced a layout recalculation for every single item.
+### 2. Performance vs. Accuracy (The `textContent` War) ⚡
+Initially, I used `innerText` to read prices because it ignores hidden HTML elements. However, this caused **Layout Thrashing**, making the browser freeze on older phones because it forced a layout recalculation for every single item.
 
-The Solution: 
-I rewrote the core logic to use textContent (which is instant/zero-lag) but added a "Greedy Regex" cleaner to manually strip out the hidden metadata and "ghost" symbols that innerText used to handle for us. This resulted in a 10x speed boost on mobile.
+**The Solution:**
+I rewrote the core logic to use `textContent` (which is instant/zero-lag) but added a **"Greedy Regex"** cleaner to manually strip out the hidden metadata and "ghost" symbols that `innerText` used to handle for us. This resulted in a **10x speed boost** on mobile.
 
-3. **The Nested Grid Nightmare 🕸️**
-* Unlike simple websites, Zepto uses a deeply nested V2 Grid layout where the actual product cards are buried under 10+ layers of divs. A standard selector would often grab the wrong container, breaking the sort.
+### 3. The Nested Grid Nightmare 🕸️
+Unlike simple websites, Zepto uses a deeply nested V2 Grid layout where the actual product cards are buried under 10+ layers of `div`s. A standard selector would often grab the wrong container, breaking the sort.
 
-The Solution: 
-I built a "Voting System." The script scans all product links, traces their parents, and "votes" on which container holds the most items. The winner is identified as the Master Grid, ensuring the script works even if Zepto changes their class names.
+**The Solution:**
+I built a **"Voting System."** The script scans all product links, traces their parents, and "votes" on which container holds the most items. The winner is identified as the Master Grid, ensuring the script works even if Zepto changes their class names.
 
-4. **Browser Limits & 429 Errors 🛡️**
-* Loading 500+ items at once would often crash the browser tab or get my IP rate-limited (HTTP 429) by Zepto's server.
+### 4. Browser Limits & 429 Errors 🛡️
+Loading 500+ items at once would often crash the browser tab or get my IP rate-limited (HTTP 429) by Zepto's server.
 
-The Solution:
-* Turbo Mode: The script temporarily hides all images (visibility: hidden) during the scan. This frees up massive amounts of RAM and GPU, preventing crashes.
-* Safe Scrolling: I implemented a human-like scroll throttle that pauses every few seconds to respect server limits.
+**The Solution:**
+* **Turbo Mode:** The script temporarily hides all images (`visibility: hidden`) during the scan. This frees up massive amounts of RAM and GPU, preventing crashes.
+* **Safe Scrolling:** I implemented a human-like scroll throttle that pauses every few seconds to respect server limits.
 
-5. **Mobile UX 📱**
-* Running this on a phone was tricky because standard bookmarklets are hard to control on touchscreens.
+### 5. Mobile UX 📱
+Running this on a phone was tricky because standard bookmarklets are hard to control on touchscreens.
 
-The Solution: 
-I built a custom Floating Action Button (FAB) interface. I also separated the "Scan" logic from the "Sort" logic into a split-control system, allowing users to toggle between Price Low-High and Discount High-Low instantly without reloading the page.
+**The Solution:**
+I built a custom **Floating Action Button (FAB)** interface. I also separated the "Scan" logic from the "Sort" logic into a split-control system, allowing users to toggle between **Price Low-High** and **Discount High-Low** instantly without reloading the page.
 
 ## ⚠️ Disclaimer
 
