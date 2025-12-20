@@ -4,31 +4,90 @@ I built this tool because one of the main issues Zepto users face is finding goo
 
 Zepto also removed the discount percentage tag from their interface, so it was extremely tiresome to guess or calculate how much discount a product actually had.
 
-This is a Javascript bookmarklet that injects a sorting panel into the Zepto website to solve these problems.
+This is a Javascript bookmarklet that injects a sorting panel into the Zepto website to solve these problems. **Now available for both PC and Mobile!**
 
-## 🚀 How to Install
-1. Create a new bookmark in your browser.
-2. Name it **"Zepto Sort"**.
-3. In the URL field, paste the code below:
+## 🚀 How to Install (Auto-Updating)
 
-```
-javascript:(function(){console.log("Starting Zepto Product Sorter v1.0...");const CATEGORIES=["Atta","Rice","Oil","Ghee","Dal","Masala","Packaged Foods","Tea","Coffee","Biscuits","Dairy","Sweets","Snacks","Skincare","Cleaning"];const MIN_DISCOUNT=40;const SCROLL_THROTTLE=1500;const style=document.createElement("style");style.innerHTML=`@keyframes z-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}.z-dock{position:fixed;z-index:99999;background:#fff;box-shadow:0 0 20px rgba(0,0,0,0.15);padding:10px;padding-top:35px;font-family:sans-serif;transition:all 0.3s;border-radius:12px;border:1px solid #eee;box-sizing:border-box}.z-dock.desktop{top:100px;right:20px;width:140px;max-height:80vh;overflow-y:auto}.z-dock.mobile{bottom:0;left:0;width:100%;height:80px;display:flex;align-items:center;overflow-x:auto;white-space:nowrap;border-radius:12px 12px 0 0;padding-top:10px}.z-dock.minimized .z-btn:not(.manual){display:none!important}.z-dock.minimized{height:auto!important;overflow:hidden}.z-btn{display:block;width:100%;background:#f8f9fa;border:1px solid #e9ecef;border-radius:8px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;font-weight:600;color:#495057;transition:all 0.2s;text-align:left;box-sizing:border-box}.z-dock.mobile .z-btn{display:inline-block;width:auto;margin:0 4px}.z-btn:hover{background:#ff3269;color:white;border-color:#ff3269;padding-left:15px}.z-btn.active{background:#720e9e;color:white;border-color:#720e9e}.z-btn.manual{background:#f3e5f5;border-color:#ce93d8;color:#7b1fa2;text-align:center;font-weight:700}.z-ctrl{position:absolute;top:8px;width:24px;height:24px;background:#eee;color:#333;border-radius:50%;text-align:center;line-height:24px;font-size:14px;cursor:pointer;transition:background 0.2s;z-index:100000}.z-ctrl:hover{background:#ff3269;color:white}.z-close{right:8px}.z-toggle{right:36px}.z-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(20,0,30,0.85);backdrop-filter:blur(5px);z-index:99998;display:none;flex-direction:column;justify-content:center;align-items:center}.z-spinner{width:70px;height:70px;border:6px solid rgba(255,255,255,0.1);border-top:6px solid #ff3269;border-radius:50%;animation:z-spin 1s linear infinite;margin-bottom:25px}.z-text{color:white;font-size:18px;font-weight:500;letter-spacing:0.5px;text-shadow:0 2px 4px rgba(0,0,0,0.5)}`;document.head.appendChild(style);const dock=document.createElement("div");dock.className=window.innerWidth>768?"z-dock desktop":"z-dock mobile";const closeBtn=document.createElement("div");closeBtn.className="z-ctrl z-close";closeBtn.innerText="✕";closeBtn.onclick=()=>dock.remove();dock.appendChild(closeBtn);const toggleBtn=document.createElement("div");toggleBtn.className="z-ctrl z-toggle";toggleBtn.innerText="−";toggleBtn.onclick=()=>{dock.classList.toggle("minimized");toggleBtn.innerText=dock.classList.contains("minimized")?"+":"−"};dock.appendChild(toggleBtn);const loader=document.createElement("div");loader.className="z-loader";const spinner=document.createElement("div");spinner.className="z-spinner";const msg=document.createElement("div");msg.className="z-text";msg.innerText="Initializing...";loader.appendChild(spinner);loader.appendChild(msg);document.body.appendChild(dock);document.body.appendChild(loader);const wait=ms=>new Promise(r=>setTimeout(r,ms));const showToast=(text)=>{const t=document.createElement("div");t.innerText=text;t.style.cssText="position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(50,50,50,0.9);color:#fff;padding:12px 24px;border-radius:30px;z-index:100002;font-size:14px;box-shadow:0 4px 15px rgba(0,0,0,0.3);opacity:0;transition:opacity 0.3s ease-in-out;pointer-events:none;";document.body.appendChild(t);setTimeout(()=>t.style.opacity="1",10);setTimeout(()=>{t.style.opacity="0";setTimeout(()=>t.remove(),300)},3000)};const toggleTurbo=(on)=>{let t=document.getElementById("z-turbo");if(on){if(!t){t=document.createElement("style");t.id="z-turbo";t.innerHTML="img{visibility:hidden!important;} *{transition:none!important;animation:none!important;}";document.head.appendChild(t)}}else{if(t)t.remove()}};const typeReact=async(val)=>{const input=document.querySelector('input[type="text"]');if(!input)return;input.focus();const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,"value").set;s.call(input,"");input.dispatchEvent(new Event("input",{bubbles:!0}));await wait(200);s.call(input,val);input.dispatchEvent(new Event("input",{bubbles:!0}));await wait(500);const k={bubbles:!0,cancelable:!0,key:"Enter",code:"Enter",keyCode:13,which:13};input.dispatchEvent(new KeyboardEvent("keydown",k));input.dispatchEvent(new KeyboardEvent("keyup",k))};const pressEnterOnly=async()=>{const input=document.querySelector('input[type="text"]');if(!input)return;input.focus();await wait(200);const k={bubbles:!0,cancelable:!0,key:"Enter",code:"Enter",keyCode:13,which:13};input.dispatchEvent(new KeyboardEvent("keydown",k));input.dispatchEvent(new KeyboardEvent("keyup",k));};const scrollTillEnd=async()=>{let lastCount=0;let unchanged=0;while(unchanged<2){const items=Array.from(document.querySelectorAll("a")).filter(el=>el.innerText.includes("₹"));if(items.length>0){items[items.length-1].scrollIntoView({block:"start",behavior:"auto"});await wait(SCROLL_THROTTLE);window.scrollBy({top:-150,behavior:"auto"})}else{window.scrollBy(0,500)}await wait(2000);const newCount=document.querySelectorAll("a").length;if(newCount===lastCount){unchanged++}else{lastCount=newCount;unchanged=0}}};const processPage=async()=>{msg.innerText="Sorting by discount...";await wait(500);const allLinks=Array.from(document.querySelectorAll("a")).filter(el=>el.innerText.includes("₹"));if(0===allLinks.length)throw new Error("No products found.");const votes=new Map;allLinks.forEach(l=>{let curr=l.parentElement;for(let i=0;i<4;i++){if(curr){votes.set(curr,(votes.get(curr)||0)+1);curr=curr.parentElement}}});const sortedVotes=Array.from(votes.entries()).sort((a,b)=>b[1]-a[1]);const masterGrid=sortedVotes[0][0];const tagClass="my-discount-tag-zs";let processed=[];const rawItems=masterGrid?Array.from(masterGrid.querySelectorAll("a")):allLinks;const getDiscount=el=>{const parent=el.closest("div");const parentText=parent?parent.textContent.toUpperCase():el.textContent.toUpperCase();if(parentText.includes("NOTIFY")||parentText.includes("OUT OF STOCK"))return-1;let cleanText=el.textContent.replace(/Save\s*₹\s*[\d,.]+/ig,"").replace(/[\d,.]+\s*Off/ig,"");const m=cleanText.match(/₹\s*[\d,.]+/g);if(m&&m.length>=2){const v=[...new Set(m.map(x=>parseFloat(x.replace(/[^0-9.]/g,""))))].sort((a,b)=>b-a);if(v.length>=2){const mrp=v[0];const offer=v[1];if(mrp>0)return((mrp-offer)/mrp*100)}}return 0;};rawItems.forEach(el=>{const txt=el.textContent.toUpperCase();if(txt.includes("₹")&&!txt.includes("BANNER")){const parent=el.closest('div');if(parent&&parent.getAttribute("data-type")==="BANNER_CAROUSEL_WITHOUT_TITLE")return;const pct=getDiscount(el);if(pct===-1)return;const oldTag=el.querySelector("."+tagClass);if(oldTag)oldTag.remove();if(pct>0){const tag=document.createElement("div");tag.innerHTML=`${Math.round(pct)}%<div style="font-size:9px;opacity:0.9">OFF</div>`;tag.className=tagClass;tag.style.cssText="position:absolute;top:10px;left:10px;background:#720e9e;color:white;font-weight:700;font-size:13px;padding:4px 6px;text-align:center;line-height:1;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.2);z-index:10;display:flex;flex-direction:column;justify-content:center;";el.style.position="relative";el.appendChild(tag)}processed.push({element:el,discount:pct})}});let finalItems=processed.filter(p=>p.discount>=MIN_DISCOUNT);if(finalItems.length===0){showToast(`No items >= ${MIN_DISCOUNT}% OFF. Showing all.`);finalItems=processed}finalItems.sort((a,b)=>b.discount-a.discount);masterGrid.innerHTML="";finalItems.forEach(p=>masterGrid.appendChild(p.element));toggleTurbo(false);if(masterGrid){const y=masterGrid.getBoundingClientRect().top+window.scrollY-130;window.scrollTo({top:y,behavior:"smooth"})}};const runAutoTask=async(cat,btn)=>{loader.style.display="flex";btn.classList.add("active");btn.innerText="...";try{let input=document.querySelector('input[type="text"]');if(!input||input.offsetParent===null){const icon=document.querySelector('a[href="/search"]')||document.querySelector('a[href*="search"]');if(icon){icon.click();await wait(1500);input=document.querySelector('input[type="text"]')}}if(!input)throw new Error("Search not found");const stale=Array.from(document.querySelectorAll("a")).filter(e=>e.innerText.includes("₹"));stale.forEach(e=>e.remove());msg.innerText=`Searching: ${cat}`;await typeReact(cat);await wait(3500);msg.innerText="Cleaning residue...";await pressEnterOnly();await wait(2500);window.scrollTo(0,0);toggleTurbo(true);msg.innerText="Loading (Safe Mode)...";await scrollTillEnd();await processPage();}catch(e){toggleTurbo(false);alert("Error: "+e.message)}loader.style.display="none";btn.classList.remove("active");btn.innerText=cat;};const runManualTask=async(btn)=>{loader.style.display="flex";btn.innerText="...";msg.innerText="Processing (Safe Mode)...";try{toggleTurbo(true);await scrollTillEnd();await processPage();}catch(e){toggleTurbo(false);alert("Error: "+e.message)}loader.style.display="none";btn.innerText="⚡ Sort Page";};const mb=document.createElement("button");mb.className="z-btn manual";mb.innerText="⚡ Sort Page";mb.onclick=()=>runManualTask(mb);dock.appendChild(mb);CATEGORIES.forEach(cat=>{const btn=document.createElement("button");btn.className="z-btn";btn.innerText=cat;btn.onclick=()=>runAutoTask(cat,btn);dock.appendChild(btn)})();})();
-```
+We use a "Loader" method. This means you only install a tiny script once. Whenever I update the code to fix bugs (like the recent 4700BC/Rice pricing issues), your bookmark updates automatically!
+
+### 💻 For PC / Laptop (Chrome, Edge, Brave)
+
+1.  Create a new bookmark in your browser.
+2.  Name it **"Zepto PC Sort"**.
+3.  In the URL field, paste this code:
+    ```javascript
+    javascript:(function(){var s=document.createElement('script');s.src='[https://cdn.jsdelivr.net/gh/jairaj26/zepto-product-sorter/zepto-pc.js?'+Math.random();document.body.appendChild(s](https://cdn.jsdelivr.net/gh/jairaj26/zepto-product-sorter/zepto-pc.js?'+Math.random();document.body.appendChild(s));})();
+    ```
+4.  Go to Zepto, search for a category (e.g., "Biscuits"), and click the bookmark!
+
+### 📱 For Mobile (Android/iOS)
+
+1.  Create a new bookmark in your mobile browser.
+2.  Name it **"Zepto Mobile"**.
+3.  In the URL/Address field, paste this code:
+    ```javascript
+    javascript:(function(){var s=document.createElement('script');s.src='[https://cdn.jsdelivr.net/gh/jairaj26/zepto-product-sorter/zepto-mobile.js?'+Math.random();document.body.appendChild(s](https://cdn.jsdelivr.net/gh/jairaj26/zepto-product-sorter/zepto-mobile.js?'+Math.random();document.body.appendChild(s));})();
+    ```
+4.  **How to run on Mobile:** * Open Zepto website.
+    * Tap the Address Bar.
+    * Type "Zepto Mobile" (the name of your bookmark).
+    * Tap the bookmark when it appears in the suggestions.
+
+---
 
 ## 🌟 Features
+
 * **Sort by Discount:** Automatically reorders the product grid to show the highest "Real Discount" (Percentage Off) at the top.
 * **Restores Discount Tags:** Calculates and displays the exact discount percentage (e.g., "40% OFF") on every product card.
-* **Turbo Mode (Fast Loading):** Temporarily hides images while scrolling to prevent lag on older computers.
+* **Smart Price Detection:** Uses "Guillotine Logic" to strictly separate prices from brand names (fixes bugs where brand numbers like "921 Rice" or "4700BC" were confused for prices).
+* **Split Controls (Mobile):** Separate buttons for Scanning and Toggling (Price Low-High vs Discount High-Low).
+* **Turbo Mode:** Temporarily hides images while scrolling to prevent lag on older computers/phones.
 * **Auto-Scroll:** Automatically loads all items in the category so you don't have to scroll manually.
-* **Safe Mode:** Scrolls at a human-like speed to avoid getting blocked by Zepto's server (prevents HTTP 429 errors).
+* **Safety Switch:** Automatically detects items with 0% discount and prevents calculation errors.
 
 ## 📂 Files
-1. **`source-code.js`**: The readable, formatted code. Useful for developers who want to understand the logic.
-2. **`zepto-sorter.js`**: The minified bookmarklet code. Create a bookmark in your browser and paste this into the URL field to use the tool.
 
-## 🛠️ How I built it
-I spent about a month engineering this. The biggest technical challenge was handling Zepto's new V2 nested grid layout and preventing browser freeze when calculating math for hundreds of items. I solved this by implementing a "Deep Scan" DOM traversal and switching to `textContent` reading for zero-lag performance.
+* **`zepto-pc.js`**: The production code for Desktop browsers. Includes the sidebar UI and category buttons.
+* **`zepto-mobile.js`**: The production code for Mobile browsers. Includes the Floating Action Button (FAB) and touch-friendly UI.
+* **`source-pc.js` and `source-mobile.js`**: The un-minified, readable code (for developers who want to learn how it works).
+
+## 🛠️ How I Built It (The Engineering Journey)
+
+I spent about a month reverse-engineering Zepto's frontend to build this. What started as a simple "sort" script turned into a complex engineering challenge due to Zepto's dynamic architecture. Here were the main hurdles:
+
+1.  ** The "Dirty Data" Challenge 🧹**
+* Zepto's product cards are unstructured. A simple number scraper would fail miserably because:
+* Brand Confusion: Brands like "24 Mantra", "921 Rice", or "4700BC" were often mistaken for prices (e.g., the script thought "4700" was the MRP, showing a 99% discount).
+* Unit Noise: Weights like "500g" or "100ml" often appeared before the price.
+
+The Solution: 
+I implemented "Guillotine Logic." The script actively hunts for the "OFF" tag and physically chops the text string at that exact point. It strictly ignores any number that appears after the discount tag, instantly solving the brand name bug.
+
+2. **Performance vs. Accuracy (The textContent War) ⚡**
+* Initially, I used innerText to read prices because it ignores hidden HTML elements. However, this caused * Layout Thrashing, making the browser freeze on older phones because it forced a layout recalculation for every single item.
+
+The Solution: 
+I rewrote the core logic to use textContent (which is instant/zero-lag) but added a "Greedy Regex" cleaner to manually strip out the hidden metadata and "ghost" symbols that innerText used to handle for us. This resulted in a 10x speed boost on mobile.
+
+3. **The Nested Grid Nightmare 🕸️**
+* Unlike simple websites, Zepto uses a deeply nested V2 Grid layout where the actual product cards are buried under 10+ layers of divs. A standard selector would often grab the wrong container, breaking the sort.
+
+The Solution: 
+I built a "Voting System." The script scans all product links, traces their parents, and "votes" on which container holds the most items. The winner is identified as the Master Grid, ensuring the script works even if Zepto changes their class names.
+
+4. **Browser Limits & 429 Errors 🛡️**
+* Loading 500+ items at once would often crash the browser tab or get my IP rate-limited (HTTP 429) by Zepto's server.
+
+The Solution:
+* Turbo Mode: The script temporarily hides all images (visibility: hidden) during the scan. This frees up massive amounts of RAM and GPU, preventing crashes.
+* Safe Scrolling: I implemented a human-like scroll throttle that pauses every few seconds to respect server limits.
+
+5. **Mobile UX 📱**
+* Running this on a phone was tricky because standard bookmarklets are hard to control on touchscreens.
+
+The Solution: 
+I built a custom Floating Action Button (FAB) interface. I also separated the "Scan" logic from the "Sort" logic into a split-control system, allowing users to toggle between Price Low-High and Discount High-Low instantly without reloading the page.
 
 ## ⚠️ Disclaimer
-This is a personal learning project and is not affiliated with Zepto.
-*Original concept inspired by a community script. Completely re-engineered with Turbo Mode, Safe-Scrolling, and a React-friendly UI.*
+
+This is a personal learning project and is not affiliated with Zepto. Original concept inspired by a community script. Completely re-engineered with Turbo Mode, Safe-Scrolling, and Mobile support.
