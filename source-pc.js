@@ -1,10 +1,12 @@
-/**
- * Zepto Product Sorter (PC Version) - v1.1
+/*
+ * Zepto Product Sorter (PC Version) - v1.2
  * * Features:
  * - Sidebar UI with Category shortcuts
  * - "Guillotine" Logic to fix 4700BC/Rice pricing bugs
  * - Safety Switch for 0% discount items
- * - Turbo Mode (hides images) for performance
+ * - "Re-Search" logic to clear ghost items (Enter key simulation)
+ * - DocumentFragment batching to prevent freeze
+ * - URL Safe Bitwise Throttle (i & 63)
  */
 
 (function () {
@@ -105,7 +107,11 @@
         }
 
         MASTER_GRID.innerHTML = "";
-        CACHED_ITEMS.forEach(item => MASTER_GRID.appendChild(item.element));
+        
+        // Use DocumentFragment for batch insertion (Prevents Freeze)
+        const fragment = doc.createDocumentFragment();
+        CACHED_ITEMS.forEach(item => fragment.appendChild(item.element));
+        MASTER_GRID.appendChild(fragment);
         
         // Scroll to top of grid
         const yOffset = MASTER_GRID.getBoundingClientRect().top + window.scrollY - 130;
@@ -114,7 +120,7 @@
 
     const processItems = async () => {
         updateMsg("Sorting...");
-        await wait(500);
+        await wait(100);
 
         const allPriceLinks = selectAll("a").filter(e => e.textContent.includes("₹"));
         if (!allPriceLinks.length) throw "No items found";
@@ -140,11 +146,16 @@
         // Determine list of items to process
         const rawItems = MASTER_GRID ? Array.from(MASTER_GRID.querySelectorAll("a")) : allPriceLinks;
 
-        rawItems.forEach(el => {
+        for (let i = 0; i < rawItems.length; i++) {
+            // Anti-Freeze Throttle: Pause every 64 items
+            // We use (i & 63) instead of % to avoid URL encoding bugs (The "iP" Error)
+            if ((i & 63) === 0) await wait(0);
+
+            const el = rawItems[i];
             const text = el.textContent.toUpperCase();
             
             // Skip utility links
-            if (!text.includes("₹") || text.includes("BANNER") || text.includes("NOTIFY") || text.includes("OUT OF STOCK")) return;
+            if (!text.includes("₹") || text.includes("BANNER") || text.includes("NOTIFY") || text.includes("OUT OF STOCK")) continue;
 
             let discount = 0;
             let finalPrice = 999999;
@@ -195,7 +206,7 @@
             }
 
             processedItems.push({ element: el, discount: discount, price: finalPrice });
-        });
+        }
 
         if (!processedItems.length) {
             alert("No items found");
@@ -211,25 +222,28 @@
     };
 
     const runAutoScroll = async (category, btn) => {
+        MASTER_GRID = null; // Reset Cache
+        CACHED_ITEMS = [];
+
         loader.style.display = "flex";
         btn.classList.add("active");
         btn.innerText = "...";
 
         try {
-            // Find Search Box
-            let input = select('input[type="text"]');
-            if (!input) {
+            // Find Search Box (renamed var to 'sb' to avoid 'i' conflict)
+            let sb = select('input[type="text"]');
+            if (!sb) {
                 const searchIcon = select('a[href*="search"]');
                 if (searchIcon) {
                     searchIcon.click();
                     await wait(1500);
-                    input = select('input[type="text"]');
+                    sb = select('input[type="text"]');
                 }
             }
-            if (!input) throw "Search box not found";
+            if (!sb) throw "Search box not found";
 
             // Clear previous items
-            selectAll("a").filter(e => e.innerText.includes("₹")).forEach(e => e.remove());
+            selectAll("a").filter(e => e.textContent.includes("₹")).forEach(e => e.remove());
             
             updateMsg("Search: " + category);
 
@@ -238,22 +252,22 @@
             const enterKey = { bubbles: true, key: "Enter", keyCode: 13, which: 13 };
 
             // 1. Clear Input
-            input.focus();
-            setNativeValue.call(input, "");
-            input.dispatchEvent(new Event("input", { bubbles: true }));
+            sb.focus();
+            setNativeValue.call(sb, "");
+            sb.dispatchEvent(new Event("input", { bubbles: true }));
             await wait(200);
-            input.dispatchEvent(new KeyboardEvent("keydown", enterKey));
-            input.dispatchEvent(new KeyboardEvent("keyup", enterKey));
+            sb.dispatchEvent(new KeyboardEvent("keydown", enterKey));
+            sb.dispatchEvent(new KeyboardEvent("keyup", enterKey));
             await wait(1000);
 
             // 2. Type Category
-            setNativeValue.call(input, category);
-            input.dispatchEvent(new Event("input", { bubbles: true }));
+            setNativeValue.call(sb, category);
+            sb.dispatchEvent(new Event("input", { bubbles: true }));
             await wait(500);
             
             // 3. Press Enter
-            input.dispatchEvent(new KeyboardEvent("keydown", enterKey));
-            input.dispatchEvent(new KeyboardEvent("keyup", enterKey));
+            sb.dispatchEvent(new KeyboardEvent("keydown", enterKey));
+            sb.dispatchEvent(new KeyboardEvent("keyup", enterKey));
             await wait(2500);
 
             // 4. Scroll Loop
@@ -265,7 +279,7 @@
             let unchangedAttempts = 0;
             
             while (unchangedAttempts < 2) {
-                const items = selectAll("a").filter(e => e.innerText.includes("₹"));
+                const items = selectAll("a").filter(e => e.textContent.includes("₹"));
                 if (items.length) {
                     items[items.length - 1].scrollIntoView({ block: "start" });
                     await wait(1500);
@@ -297,15 +311,29 @@
     };
 
     const runManualSort = async (btn) => {
+        MASTER_GRID = null;
+        CACHED_ITEMS = [];
+
         loader.style.display = "flex";
         btn.innerText = "...";
         try {
+            // "RE-SEARCH" FIX: Force refresh grid if search text exists
+            let sb = select('input[type="text"]');
+            if (sb && sb.value.length > 0) {
+                updateMsg("Refreshing...");
+                sb.focus();
+                const k = { bubbles: true, key: "Enter", keyCode: 13, which: 13 };
+                sb.dispatchEvent(new KeyboardEvent("keydown", k));
+                sb.dispatchEvent(new KeyboardEvent("keyup", k));
+                await wait(1500);
+            }
+
             toggleTurbo(true);
             // Quick Scroll
             let lastCount = 0;
             let unchangedAttempts = 0;
             while (unchangedAttempts < 2) {
-                const items = selectAll("a").filter(e => e.innerText.includes("₹"));
+                const items = selectAll("a").filter(e => e.textContent.includes("₹"));
                 if (items.length) {
                     items[items.length - 1].scrollIntoView({ block: "start" });
                     await wait(1500);
